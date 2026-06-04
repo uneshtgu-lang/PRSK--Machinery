@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRSK Construction — Machinery Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+:root{--green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-text:#085041;--amber:#EF9F27;--amber-light:#FAEEDA;--amber-text:#633806;--blue:#378ADD;--blue-light:#E6F1FB;--blue-text:#0C447C;--red:#E24B4A;--red-light:#FCEBEB;--red-text:#501313;--bg:#F7F6F2;--surface:#FFFFFF;--border:rgba(0,0,0,0.1);--border-strong:rgba(0,0,0,0.18);--text:#1a1a18;--text-2:#5a5a55;--text-3:#9a9a94;--radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.07),0 4px 12px rgba(0,0,0,0.04)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:36px;height:36px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.brand-name{font-size:15px;font-weight:600;letter-spacing:-0.01em}
+.brand-sub{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;letter-spacing:0.04em;text-transform:uppercase}
+.role-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px;border:1px solid var(--border)}
+.role-tab{padding:5px 14px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text-2);font-weight:500;transition:all 0.15s}
+.role-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;margin-right:6px;transition:background 0.3s}
+.sync-dot.live{background:var(--green);animation:pulse 2s infinite}
+.sync-label{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;display:flex;align-items:center}
+.container{max-width:1200px;margin:0 auto;padding:24px 20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+.stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.stat-icon.running{background:var(--green-light);color:var(--green-dark)}
+.stat-icon.idle{background:var(--amber-light);color:var(--amber-text)}
+.stat-icon.maintenance{background:var(--blue-light);color:var(--blue-text)}
+.stat-icon.offline{background:var(--red-light);color:var(--red-text)}
+.stat-num{font-size:26px;font-weight:600;line-height:1;letter-spacing:-0.02em}
+.stat-label{font-size:11px;color:var(--text-3);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;font-family:'DM Mono',monospace}
+.approval-panel{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);margin-bottom:24px;box-shadow:var(--shadow);overflow:hidden}
+.approval-panel-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:#FFFBF5}
+.approval-panel-header h2{font-size:14px;font-weight:600}
+.dot-amber{width:8px;height:8px;background:var(--amber);border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.badge-count{background:var(--amber);color:#fff;font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace}
+.approval-list{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.approval-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);flex-wrap:wrap}
+.approval-machine{font-size:13px;font-weight:600}
+.approval-detail{font-size:11px;color:var(--text-2);margin-top:2px;font-family:'DM Mono',monospace}
+.approval-btns{margin-left:auto;display:flex;gap:6px}
+.btn-approve{padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;transition:background 0.15s}
+.btn-approve:hover{background:var(--green-dark)}
+.btn-reject{padding:6px 14px;background:transparent;color:var(--text-2);border:1px solid var(--border-strong);border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.btn-reject:hover{background:var(--red-light);color:var(--red-text);border-color:var(--red)}
+.empty-approvals{padding:16px;text-align:center;color:var(--text-3);font-size:13px}
+.toolbar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.search-wrap{flex:1;min-width:200px;position:relative}
+.search-wrap i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:16px}
+.search-wrap input{width:100%;padding:8px 10px 8px 34px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border 0.15s;box-shadow:var(--shadow)}
+.search-wrap input:focus{border-color:var(--green)}
+.filter-select{padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:var(--shadow);outline:none}
+.btn-add{padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;transition:background 0.15s}
+.btn-add:hover{background:var(--green-dark)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);transition:box-shadow 0.15s}
+.card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1),0 8px 24px rgba(0,0,0,0.06)}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:8px}
+.card-name{font-size:13px;font-weight:600;line-height:1.35;flex:1}
+.status-badge{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;font-family:'DM Mono',monospace;letter-spacing:0.01em}
+.status-badge.running{background:var(--green-light);color:var(--green-text)}
+.status-badge.idle{background:var(--amber-light);color:var(--amber-text)}
+.status-badge.maintenance{background:var(--blue-light);color:var(--blue-text)}
+.status-badge.offline{background:var(--red-light);color:var(--red-text)}
+.card-divider{height:1px;background:var(--border);margin-bottom:10px}
+.card-rows{display:flex;flex-direction:column;gap:6px}
+.card-row{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.card-row-label{color:var(--text-3);display:flex;align-items:center;gap:5px}
+.card-row-label i{font-size:13px}
+.card-row-val{font-weight:500;text-align:right;max-width:55%;word-break:break-word}
+.card-notes{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text-2);display:flex;gap:5px;align-items:flex-start;line-height:1.5}
+.card-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.btn-edit{flex:1;padding:7px;border-radius:8px;background:var(--green);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s}
+.btn-edit:hover{background:var(--green-dark)}
+.btn-del{padding:7px 10px;border-radius:8px;background:transparent;border:1px solid var(--border-strong);cursor:pointer;font-size:13px;color:var(--text-3);transition:all 0.15s}
+.btn-del:hover{background:var(--red-light);color:var(--red-text);border-color:var(--red)}
+.empty-grid{text-align:center;padding:3rem;color:var(--text-3);font-size:13px;grid-column:1/-1}
+.loading-grid{text-align:center;padding:3rem;color:var(--text-3);font-size:13px;grid-column:1/-1}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:22px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-title{font-size:15px;font-weight:600}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text-3);font-size:20px;padding:2px;line-height:1;transition:color 0.15s}
+.modal-close:hover{color:var(--text)}
+.form-row{margin-bottom:12px}
+.form-row label{font-size:11px;color:var(--text-2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em;font-family:'DM Mono',monospace;font-weight:500}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:8px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border 0.15s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--green);background:var(--surface)}
+.form-row textarea{resize:vertical;min-height:70px;line-height:1.5}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-footer{display:flex;gap:8px;margin-top:18px}
+.btn-cancel{flex:1;padding:9px;border-radius:var(--radius);background:transparent;border:1px solid var(--border-strong);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text-2);transition:all 0.15s}
+.btn-cancel:hover{background:var(--bg)}
+.btn-submit{flex:2;padding:9px;border-radius:var(--radius);background:var(--green);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;transition:background 0.15s}
+.btn-submit:hover{background:var(--green-dark)}
+.btn-submit:disabled{opacity:0.6;cursor:not-allowed}
+.pic-notice{background:var(--amber-light);border-radius:var(--radius);padding:9px 12px;font-size:12px;color:var(--amber-text);display:flex;gap:7px;align-items:flex-start;margin-bottom:14px;border:1px solid rgba(239,159,39,0.25)}
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1a18;color:#fff;padding:11px 18px;border-radius:var(--radius);font-size:13px;z-index:999;transform:translateY(10px);opacity:0;transition:all 0.25s;pointer-events:none;display:flex;align-items:center;gap:8px;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast i{font-size:16px;color:var(--green)}
+.section-label{font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.topbar{padding:0 14px}.container{padding:16px 12px}.brand-sub{display:none}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon"><i class="ti ti-crane"></i></div>
+    <div>
+      <div class="brand-name">PRSK Construction</div>
+      <div class="brand-sub">Machinery Monitor</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="sync-label"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Connecting...</span></div>
+    <div class="role-tabs">
+      <button class="role-tab active" onclick="setRole('public',this)">Public</button>
+      <button class="role-tab" onclick="setRole('pic',this)">PIC</button>
+      <button class="role-tab" onclick="setRole('admin',this)">Admin</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="stats">
+    <div class="stat-card"><div class="stat-icon running"><i class="ti ti-engine"></i></div><div><div class="stat-num" id="cnt-running">—</div><div class="stat-label">Running</div></div></div>
+    <div class="stat-card"><div class="stat-icon idle"><i class="ti ti-clock-pause"></i></div><div><div class="stat-num" id="cnt-idle">—</div><div class="stat-label">Idle</div></div></div>
+    <div class="stat-card"><div class="stat-icon maintenance"><i class="ti ti-tool"></i></div><div><div class="stat-num" id="cnt-maint">—</div><div class="stat-label">Maintenance</div></div></div>
+    <div class="stat-card"><div class="stat-icon offline"><i class="ti ti-circle-off"></i></div><div><div class="stat-num" id="cnt-offline">—</div><div class="stat-label">Offline</div></div></div>
+  </div>
+
+  <div class="approval-panel" id="admin-panel" style="display:none">
+    <div class="approval-panel-header">
+      <div class="dot-amber"></div>
+      <h2>Pending Approvals</h2>
+      <span class="badge-count" id="pending-count" style="display:none">0</span>
+    </div>
+    <div class="approval-list" id="approval-list"><div class="empty-approvals">No pending requests.</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <i class="ti ti-search"></i>
+      <input type="text" id="search" placeholder="Search by name, operator, location..." oninput="renderGrid()">
+    </div>
+    <select class="filter-select" id="filter-status" onchange="renderGrid()">
+      <option value="">All Status</option>
+      <option value="running">Running</option>
+      <option value="idle">Idle</option>
+      <option value="maintenance">Under Maintenance</option>
+      <option value="offline">Offline</option>
+    </select>
+    <button class="btn-add" id="add-btn" style="display:none" onclick="openAddModal()"><i class="ti ti-plus"></i> Add Machinery</button>
+  </div>
+
+  <div class="section-label" id="grid-label">Loading...</div>
+  <div class="grid" id="grid"><div class="loading-grid"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite"></i><br><br>Connecting to database...</div></div>
+</div>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<div class="modal-overlay" id="modal" style="display:none" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Update</div>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><i class="ti ti-check"></i><span id="toast-msg"></span></div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZ3wOEgU2yu6lNMy4p9ivE77NxrP2B1QA",
+  authDomain: "prsk-machineries.firebaseapp.com",
+  databaseURL: "https://prsk-machineries-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "prsk-machineries",
+  storageBucket: "prsk-machineries.firebasestorage.app",
+  messagingSenderId: "32965661115",
+  appId: "1:32965661115:web:f2f94677d162ea5062349e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const DEFAULT_MACHINES = [
+  {name:'Small Lorry',spec:'AKD / BQY',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Tipper Lorry (10 Wheel)',spec:'AKL/JED/BKD/AKB/AKE/BMW/BNP/WC/TCX/AKM',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Tipper Lorry (12 Wheel)',spec:'BRS / MDT / BME',location:'Tanah Rata',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Backhoe',spec:'—',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Backhoe with Breaker',spec:'—',location:'Brinchang',operator:'Unassigned',status:'offline',hours:0,lastServiced:'',notes:''},
+  {name:'Tractor / Back Pusher',spec:'—',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Crane',spec:'JUJ 8106',location:'Tanah Rata',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Compact-25 Ton',spec:'—',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Excavator 20 Ton',spec:'200/210/225/240/250',location:'Brinchang',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Excavator 30 Ton',spec:'300/330/350',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Excavator Long Arm',spec:'200/225-SUMITOMO',location:'Tanah Rata',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Excavator Tayar Doosan 140',spec:'—',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Excavator Tayar Doosan 140 Breaker',spec:'—',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Excavator Doosan 225',spec:'—',location:'Brinchang',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Excavator Doosan Breaker 225',spec:'—',location:'Tanah Rata',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Skylift',spec:'—',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Mini Kubota (3 Ton)',spec:'—',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Mini Sumitomo (75 Ton)',spec:'—',location:'Tanah Rata',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Lorry Crane',spec:'JPM-12W-28FT',location:'Ringlet',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Low Loader (Trailer)',spec:'AKY-24W-40FT',location:'Brinchang',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Self Loader within Cameron',spec:'RN-10W-26FT',location:'Cameron Highlands',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Low Loader within Cameron',spec:'BND-12W-28FT',location:'Cameron Highlands',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Low Loader within Lojing',spec:'BND-12W-28FT',location:'Lojing',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Puzt Master Elephant Pump (Cameron)',spec:'—',location:'Cameron Highlands',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+  {name:'Puzt Master Elephant Pump (Ipoh)',spec:'—',location:'Ipoh',operator:'Unassigned',status:'idle',hours:0,lastServiced:'',notes:''},
+];
+
+const statusLabel = {running:'Running',idle:'Idle',maintenance:'Under Maintenance',offline:'Offline'};
+let machines = {};
+let pending = {};
+let role = 'public';
+let editingId = null;
+
+// Set sync status
+function setSyncStatus(live) {
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  if (live) { dot.className='sync-dot live'; label.textContent='Live'; }
+  else { dot.className='sync-dot'; label.textContent='Offline'; }
+}
+
+// Seed default machines if DB is empty
+const machinesRef = ref(db, 'machines');
+onValue(machinesRef, (snapshot) => {
+  setSyncStatus(true);
+  const data = snapshot.val();
+  if (!data) {
+    // First time — seed the database
+    DEFAULT_MACHINES.forEach(m => push(machinesRef, m));
+    return;
+  }
+  machines = data;
+  renderGrid();
+  updateStats();
+}, (error) => { setSyncStatus(false); });
+
+// Listen for pending approvals
+const pendingRef = ref(db, 'pending');
+onValue(pendingRef, (snapshot) => {
+  pending = snapshot.val() || {};
+  if (role === 'admin') renderApprovals();
+});
+
+// Expose functions globally
+window.setRole = function(r, btn) {
+  role = r;
+  document.querySelectorAll('.role-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('admin-panel').style.display = r === 'admin' ? 'block' : 'none';
+  document.getElementById('add-btn').style.display = r === 'admin' ? 'flex' : 'none';
+  renderGrid();
+  if (r === 'admin') renderApprovals();
+};
+
+function updateStats() {
+  const list = Object.values(machines);
+  document.getElementById('cnt-running').textContent = list.filter(m=>m.status==='running').length;
+  document.getElementById('cnt-idle').textContent = list.filter(m=>m.status==='idle').length;
+  document.getElementById('cnt-maint').textContent = list.filter(m=>m.status==='maintenance').length;
+  document.getElementById('cnt-offline').textContent = list.filter(m=>m.status==='offline').length;
+}
+
+window.renderGrid = function() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const fs = document.getElementById('filter-status').value;
+  const entries = Object.entries(machines).filter(([id,m]) => {
+    const match = [m.name,m.operator,m.location,m.spec].join(' ').toLowerCase().includes(q);
+    return match && (!fs || m.status===fs);
+  });
+  document.getElementById('grid-label').textContent = entries.length + ' machine' + (entries.length!==1?'s':'') + (fs?' — '+statusLabel[fs]:'');
+  const g = document.getElementById('grid');
+  if (!entries.length) { g.innerHTML='<div class="empty-grid">No machinery found.</div>'; updateStats(); return; }
+  g.innerHTML = entries.map(([id,m]) => `
+    <div class="card">
+      <div class="card-top"><div class="card-name">${m.name}</div><span class="status-badge ${m.status}">${statusLabel[m.status]}</span></div>
+      <div class="card-divider"></div>
+      <div class="card-rows">
+        <div class="card-row"><span class="card-row-label"><i class="ti ti-id-badge"></i>Spec / Plate</span><span class="card-row-val">${m.spec||'—'}</span></div>
+        <div class="card-row"><span class="card-row-label"><i class="ti ti-map-pin"></i>Location</span><span class="card-row-val">${m.location}</span></div>
+        <div class="card-row"><span class="card-row-label"><i class="ti ti-user"></i>Operator (PIC)</span><span class="card-row-val">${m.operator}</span></div>
+        <div class="card-row"><span class="card-row-label"><i class="ti ti-clock"></i>Hours Run</span><span class="card-row-val">${m.hours} hrs</span></div>
+        <div class="card-row"><span class="card-row-label"><i class="ti ti-calendar"></i>Last Serviced</span><span class="card-row-val">${m.lastServiced||'—'}</span></div>
+      </div>
+      ${m.notes?`<div class="card-notes"><i class="ti ti-notes" style="font-size:13px;margin-top:1px;flex-shrink:0"></i>${m.notes}</div>`:''}
+      ${role==='pic'?`<div class="card-actions"><button class="btn-edit" onclick="openPicModal('${id}')"><i class="ti ti-edit" style="font-size:13px"></i> Request Update</button></div>`:''}
+      ${role==='admin'?`<div class="card-actions"><button class="btn-edit" onclick="openEditModal('${id}')"><i class="ti ti-edit" style="font-size:13px"></i> Edit</button><button class="btn-del" onclick="deleteMachine('${id}')" title="Remove"><i class="ti ti-trash"></i></button></div>`:''}
+    </div>
+  `).join('');
+  updateStats();
+};
+
+function renderApprovals() {
+  const list = document.getElementById('approval-list');
+  const pc = document.getElementById('pending-count');
+  const entries = Object.entries(pending);
+  if (!entries.length) { list.innerHTML='<div class="empty-approvals">No pending requests.</div>'; pc.style.display='none'; return; }
+  pc.style.display='inline'; pc.textContent=entries.length;
+  list.innerHTML = entries.map(([pid,p]) => `
+    <div class="approval-item">
+      <div style="flex:1;min-width:160px">
+        <div class="approval-machine">${p.machineName}</div>
+        <div class="approval-detail">PIC: ${p.pic} &nbsp;·&nbsp; Status → ${statusLabel[p.newStatus]} &nbsp;·&nbsp; Op: ${p.operator} &nbsp;·&nbsp; ${p.hours}hrs</div>
+        ${p.notes?`<div class="approval-detail" style="margin-top:3px">Notes: ${p.notes}</div>`:''}
+      </div>
+      <div class="approval-btns">
+        <button class="btn-approve" onclick="approveRequest('${pid}')">Approve</button>
+        <button class="btn-reject" onclick="rejectRequest('${pid}')">Reject</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.approveRequest = async function(pid) {
+  const p = pending[pid];
+  const updates = { status:p.newStatus, operator:p.operator, hours:p.hours, location:p.location };
+  if (p.notes) updates.notes = p.notes;
+  if (p.lastServiced) updates.lastServiced = p.lastServiced;
+  await update(ref(db, 'machines/' + p.machineId), updates);
+  await remove(ref(db, 'pending/' + pid));
+  showToast('Update approved and applied.');
+};
+
+window.rejectRequest = async function(pid) {
+  await remove(ref(db, 'pending/' + pid));
+  showToast('Request rejected.');
+};
+
+window.openPicModal = function(id) {
+  const m = machines[id];
+  editingId = id;
+  document.getElementById('modal-title').textContent = m.name;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="pic-notice"><i class="ti ti-info-circle" style="font-size:15px;flex-shrink:0;margin-top:1px"></i>Your request will be sent to admin for approval before any changes take effect.</div>
+    <div class="form-row"><label>Your Name (PIC) *</label><input id="f-pic" placeholder="Enter your full name"></div>
+    <div class="form-row"><label>New Status</label><select id="f-status">
+      <option value="running" ${m.status==='running'?'selected':''}>Running</option>
+      <option value="idle" ${m.status==='idle'?'selected':''}>Idle</option>
+      <option value="maintenance" ${m.status==='maintenance'?'selected':''}>Under Maintenance</option>
+      <option value="offline" ${m.status==='offline'?'selected':''}>Offline</option>
+    </select></div>
+    <div class="form-row"><label>Operator Assigned</label><input id="f-operator" value="${m.operator==='Unassigned'?'':m.operator}" placeholder="Operator name"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Location</label><input id="f-location" value="${m.location}"></div>
+      <div class="form-row"><label>Hours Run</label><input id="f-hours" type="number" value="${m.hours}" min="0"></div>
+    </div>
+    <div class="form-row"><label>Last Serviced</label><input id="f-serviced" type="date" value="${m.lastServiced||''}"></div>
+    <div class="form-row"><label>Notes / Remarks</label><textarea id="f-notes" placeholder="Any remarks...">${m.notes}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="submitPicRequest()">Submit for Approval</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.submitPicRequest = async function() {
+  const pic = document.getElementById('f-pic').value.trim();
+  if (!pic) { showToast('Please enter your name.'); return; }
+  const m = machines[editingId];
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  await push(ref(db, 'pending'), {
+    machineId: editingId, machineName: m.name, pic,
+    newStatus: document.getElementById('f-status').value,
+    operator: document.getElementById('f-operator').value || 'Unassigned',
+    location: document.getElementById('f-location').value,
+    hours: parseInt(document.getElementById('f-hours').value) || 0,
+    lastServiced: document.getElementById('f-serviced').value || '',
+    notes: document.getElementById('f-notes').value,
+    submittedAt: new Date().toISOString()
+  });
+  closeModal();
+  showToast('Request submitted — awaiting admin approval.');
+};
+
+window.openEditModal = function(id) {
+  const m = machines[id];
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit — ' + m.name;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><label>Status</label><select id="f-status">
+      <option value="running" ${m.status==='running'?'selected':''}>Running</option>
+      <option value="idle" ${m.status==='idle'?'selected':''}>Idle</option>
+      <option value="maintenance" ${m.status==='maintenance'?'selected':''}>Under Maintenance</option>
+      <option value="offline" ${m.status==='offline'?'selected':''}>Offline</option>
+    </select></div>
+    <div class="form-row"><label>Operator (PIC)</label><input id="f-operator" value="${m.operator==='Unassigned'?'':m.operator}" placeholder="Operator name"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Location</label><input id="f-location" value="${m.location}"></div>
+      <div class="form-row"><label>Hours Run</label><input id="f-hours" type="number" value="${m.hours}" min="0"></div>
+    </div>
+    <div class="form-row"><label>Last Serviced</label><input id="f-serviced" type="date" value="${m.lastServiced||''}"></div>
+    <div class="form-row"><label>Notes / Remarks</label><textarea id="f-notes">${m.notes}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="saveEdit()">Save Changes</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.saveEdit = async function() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  await update(ref(db, 'machines/' + editingId), {
+    status: document.getElementById('f-status').value,
+    operator: document.getElementById('f-operator').value || 'Unassigned',
+    location: document.getElementById('f-location').value,
+    hours: parseInt(document.getElementById('f-hours').value) || 0,
+    lastServiced: document.getElementById('f-serviced').value || '',
+    notes: document.getElementById('f-notes').value
+  });
+  closeModal();
+  showToast('Changes saved and synced.');
+};
+
+window.openAddModal = function() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add New Machinery';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><label>Machinery Name *</label><input id="f-name" placeholder="e.g. Excavator 50 Ton"></div>
+    <div class="form-row"><label>Spec / Plate No.</label><input id="f-spec" placeholder="e.g. ABC 1234"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Location</label><input id="f-location" placeholder="e.g. Ringlet"></div>
+      <div class="form-row"><label>Status</label><select id="f-status">
+        <option value="idle">Idle</option><option value="running">Running</option>
+        <option value="maintenance">Under Maintenance</option><option value="offline">Offline</option>
+      </select></div>
+    </div>
+    <div class="form-row"><label>Operator (PIC)</label><input id="f-operator" placeholder="Operator name"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="addMachine()">Add Machinery</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.addMachine = async function() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('Please enter machinery name.'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Adding...';
+  await push(machinesRef, {
+    name, spec: document.getElementById('f-spec').value || '—',
+    location: document.getElementById('f-location').value || '—',
+    operator: document.getElementById('f-operator').value || 'Unassigned',
+    status: document.getElementById('f-status').value,
+    hours: 0, lastServiced: '', notes: ''
+  });
+  closeModal();
+  showToast('Machinery added and synced.');
+};
+
+window.deleteMachine = async function(id) {
+  if (!confirm('Remove this machinery? This cannot be undone.')) return;
+  await remove(ref(db, 'machines/' + id));
+  showToast('Machinery removed.');
+};
+
+window.closeModal = function() { document.getElementById('modal').style.display='none'; };
+window.handleOverlayClick = function(e) { if (e.target===document.getElementById('modal')) closeModal(); };
+
+window.showToast = function(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+};
+</script>
+</body>
+</html>
