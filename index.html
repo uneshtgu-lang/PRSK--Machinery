@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1D9E75">
+<title>PRSK Field Manager</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+:root{
+  --green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-text:#085041;
+  --amber:#EF9F27;--amber-light:#FAEEDA;--amber-text:#633806;
+  --blue:#2563EB;--blue-light:#EFF6FF;--blue-text:#1E3A8A;
+  --red:#DC2626;--red-light:#FEF2F2;--red-text:#7F1D1D;
+  --purple:#7C3AED;--purple-light:#F5F3FF;--purple-text:#3B0764;
+  --bg:#F1F5F9;--surface:#FFFFFF;--border:rgba(0,0,0,0.08);--border-strong:rgba(0,0,0,0.15);
+  --text:#0F172A;--text-2:#475569;--text-3:#94A3B8;
+  --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04)
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;padding-bottom:70px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* TOPBAR */
+.topbar{background:var(--green);padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:34px;height:34px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.brand-name{font-size:15px;font-weight:700;color:#fff}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.6);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.04em}
+.topbar-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.sync-label{font-size:11px;color:rgba(255,255,255,0.8);font-family:'DM Mono',monospace;display:flex;align-items:center;gap:5px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.4)}
+.sync-dot.live{background:#fff;animation:pulse 2s infinite}
+.role-tabs{display:flex;background:rgba(255,255,255,0.15);border-radius:8px;padding:3px;gap:2px}
+.role-tab{padding:4px 10px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;color:rgba(255,255,255,0.7);font-weight:500;transition:all 0.15s}
+.role-tab.active{background:#fff;color:var(--green);font-weight:600}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 8px;cursor:pointer;border:none;background:transparent;color:var(--text-3);transition:all 0.15s;gap:3px}
+.nav-item i{font-size:22px}
+.nav-item span{font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.04em}
+.nav-item.active{color:var(--green)}
+
+/* PAGES */
+.page{display:none;animation:fadeIn 0.2s ease}
+.page.active{display:block}
+.container{max-width:700px;margin:0 auto;padding:16px 14px}
+
+/* STATS */
+.stats-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.stats-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.stat-card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
+.stat-card.small{padding:10px 12px;gap:8px}
+.stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.stat-icon.sm{width:30px;height:30px;font-size:15px;border-radius:8px}
+.stat-num{font-size:22px;font-weight:700;line-height:1;letter-spacing:-0.02em}
+.stat-num.sm{font-size:18px}
+.stat-label{font-size:10px;color:var(--text-3);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;font-family:'DM Mono',monospace}
+
+/* CARDS */
+.card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:8px}
+.card-name{font-size:14px;font-weight:600;line-height:1.35;flex:1}
+.card-sub{font-size:11px;color:var(--text-3);margin-top:1px}
+.divider{height:1px;background:var(--border);margin-bottom:10px}
+.card-rows{display:flex;flex-direction:column;gap:6px}
+.card-row{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.row-label{color:var(--text-3);display:flex;align-items:center;gap:5px}
+.row-label i{font-size:13px}
+.row-val{font-weight:500;text-align:right;max-width:58%;word-break:break-word}
+.card-notes{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-2);display:flex;gap:5px;line-height:1.5}
+.card-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* BADGES */
+.badge{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;font-family:'DM Mono',monospace}
+.badge.running,.badge.working{background:var(--green-light);color:var(--green-text)}
+.badge.idle,.badge.offday{background:var(--amber-light);color:var(--amber-text)}
+.badge.maintenance,.badge.mc{background:var(--blue-light);color:var(--blue-text)}
+.badge.offline,.badge.annualleave{background:var(--red-light);color:var(--red-text)}
+
+/* AVATAR */
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* ATTENDANCE BOXES */
+.attend-row{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.attend-box{flex:1;background:var(--bg);border-radius:8px;padding:8px;text-align:center}
+.attend-lbl{font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;text-transform:uppercase}
+.attend-val{font-size:13px;font-weight:600;margin-top:2px}
+
+/* BUTTONS */
+.btn-primary{padding:9px 14px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:background 0.15s}
+.btn-primary:hover{background:var(--green-dark)}
+.btn-secondary{padding:9px 12px;border-radius:var(--radius);background:transparent;border:1px solid var(--border-strong);cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text-2)}
+.btn-danger{padding:9px 12px;border-radius:var(--radius);background:transparent;border:1px solid var(--border-strong);cursor:pointer;font-size:13px;color:var(--text-3)}
+.btn-danger:hover{background:var(--red-light);color:var(--red);border-color:var(--red)}
+.btn-checkin{flex:1;padding:9px;border-radius:8px;background:var(--green);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px}
+.btn-checkout{flex:1;padding:9px;border-radius:8px;background:var(--red-light);color:var(--red);border:1px solid var(--red);cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px}
+.btn-edit{flex:1;padding:9px;border-radius:8px;background:var(--green);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.search-wrap{flex:1;min-width:160px;position:relative}
+.search-wrap i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:16px}
+.search-wrap input{width:100%;padding:9px 10px 9px 34px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;box-shadow:var(--shadow)}
+.search-wrap input:focus{border-color:var(--green)}
+.filter-select{padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:var(--shadow);outline:none}
+.section-label{font-size:11px;font-family:'DM Mono',monospace;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px}
+
+/* DASHBOARD */
+.dash-greeting{margin-bottom:16px}
+.dash-greeting h2{font-size:20px;font-weight:700;letter-spacing:-0.01em}
+.dash-greeting p{font-size:13px;color:var(--text-3);margin-top:2px;font-family:'DM Mono',monospace}
+.dash-section{font-size:12px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 10px;font-family:'DM Mono',monospace}
+.quick-card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow 0.15s}
+.quick-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.quick-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.quick-title{font-size:14px;font-weight:600}
+.quick-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.quick-arrow{margin-left:auto;color:var(--text-3);font-size:18px}
+
+/* REPORT */
+.report-section{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.report-title{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.report-title i{color:var(--green);font-size:18px}
+.report-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.report-row:last-child{border-bottom:none}
+.report-label{color:var(--text-2);display:flex;align-items:center;gap:8px;flex:1}
+.report-val{font-weight:600;text-align:right}
+.progress-bar{height:5px;background:var(--bg);border-radius:3px;margin-top:6px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px}
+.summary-boxes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.summary-box{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px;text-align:center;box-shadow:var(--shadow)}
+.summary-num{font-size:28px;font-weight:700;letter-spacing:-0.02em}
+.summary-label{font-size:10px;color:var(--text-3);margin-top:3px;font-family:'DM Mono',monospace;text-transform:uppercase}
+.report-date{font-size:12px;color:var(--text-3);font-family:'DM Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+
+/* APPROVAL PANEL */
+.approval-panel{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden}
+.approval-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:#FFFBF5}
+.approval-header h3{font-size:13px;font-weight:600}
+.dot-amber{width:8px;height:8px;background:var(--amber);border-radius:50%;animation:pulse 1.5s infinite}
+.badge-count{background:var(--amber);color:#fff;font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace}
+.approval-list{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.approval-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);flex-wrap:wrap}
+.approval-machine{font-size:13px;font-weight:600}
+.approval-detail{font-size:11px;color:var(--text-2);margin-top:2px;font-family:'DM Mono',monospace}
+.approval-btns{margin-left:auto;display:flex;gap:6px}
+.btn-approve{padding:6px 12px;background:var(--green);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif}
+.btn-reject{padding:6px 12px;background:transparent;color:var(--text-2);border:1px solid var(--border-strong);border-radius:7px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif}
+.empty-state{text-align:center;padding:2rem;color:var(--text-3);font-size:13px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:22px;padding-bottom:calc(22px + env(safe-area-inset-bottom));width:100%;max-width:600px;max-height:92vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(0,0,0,0.2)}
+.modal-handle{width:40px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:var(--bg);border:none;cursor:pointer;color:var(--text-2);font-size:18px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.form-row{margin-bottom:13px}
+.form-row label{font-size:11px;color:var(--text-2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em;font-family:'DM Mono',monospace;font-weight:500}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:11px 13px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:15px;font-family:'DM Sans',sans-serif;outline:none;transition:border 0.15s}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--green);background:var(--surface)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-footer{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:12px;border-radius:var(--radius);background:var(--bg);border:1px solid var(--border-strong);cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text-2)}
+.btn-submit{flex:2;padding:12px;border-radius:var(--radius);background:var(--green);color:#fff;border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif}
+.btn-submit:disabled{opacity:0.6}
+.pic-notice{background:var(--amber-light);border-radius:var(--radius);padding:10px 13px;font-size:12px;color:var(--amber-text);display:flex;gap:7px;align-items:flex-start;margin-bottom:14px;border:1px solid rgba(239,159,39,0.25);line-height:1.5}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(10px);background:#0F172A;color:#fff;padding:12px 20px;border-radius:30px;font-size:13px;z-index:999;opacity:0;transition:all 0.25s;pointer-events:none;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast i{font-size:16px;color:#4ADE80}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon"><i class="ti ti-building-factory-2"></i></div>
+    <div>
+      <div class="brand-name">PRSK Field Manager</div>
+      <div class="brand-sub">Cameron Highlands</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="sync-label"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Connecting...</span></div>
+    <div class="role-tabs">
+      <button class="role-tab active" onclick="setRole('boss',this)">Boss</button>
+      <button class="role-tab" onclick="setRole('pm',this)">PM</button>
+      <button class="role-tab" onclick="setRole('hr',this)">HR</button>
+      <button class="role-tab" onclick="setRole('admin',this)">Admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGES -->
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dash">
+<div class="container">
+  <div class="dash-greeting">
+    <h2>Good Morning 👋</h2>
+    <p id="dash-date">Loading...</p>
+  </div>
+
+  <!-- OVERVIEW STATS -->
+  <div class="stats-2">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--green-light);color:var(--green)"><i class="ti ti-crane"></i></div>
+      <div><div class="stat-num" style="color:var(--green)" id="d-machines">—</div><div class="stat-label">Machines Active</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--blue-light);color:var(--blue)"><i class="ti ti-users"></i></div>
+      <div><div class="stat-num" style="color:var(--blue)" id="d-workers">—</div><div class="stat-label">Workers On Site</div></div>
+    </div>
+  </div>
+  <div class="stats-4">
+    <div class="stat-card small">
+      <div class="stat-icon sm" style="background:var(--green-light);color:var(--green)"><i class="ti ti-engine"></i></div>
+      <div><div class="stat-num sm" style="color:var(--green)" id="d-running">—</div><div class="stat-label">Running</div></div>
+    </div>
+    <div class="stat-card small">
+      <div class="stat-icon sm" style="background:var(--amber-light);color:var(--amber)"><i class="ti ti-clock-pause"></i></div>
+      <div><div class="stat-num sm" style="color:var(--amber)" id="d-idle">—</div><div class="stat-label">Idle</div></div>
+    </div>
+    <div class="stat-card small">
+      <div class="stat-icon sm" style="background:var(--red-light);color:var(--red)"><i class="ti ti-stethoscope"></i></div>
+      <div><div class="stat-num sm" style="color:var(--red)" id="d-mc">—</div><div class="stat-label">MC</div></div>
+    </div>
+    <div class="stat-card small">
+      <div class="stat-icon sm" style="background:var(--purple-light);color:var(--purple)"><i class="ti ti-plane"></i></div>
+      <div><div class="stat-num sm" style="color:var(--purple)" id="d-leave">—</div><div class="stat-label">Leave</div></div>
+    </div>
+  </div>
+
+  <!-- APPROVAL PANEL (Admin only) -->
+  <div id="d-approval-panel" style="display:none">
+    <div class="approval-panel">
+      <div class="approval-header">
+        <div class="dot-amber"></div>
+        <h3>Pending Approvals</h3>
+        <span class="badge-count" id="d-pending-count" style="display:none">0</span>
+      </div>
+      <div class="approval-list" id="d-approval-list"><div class="empty-state">No pending requests.</div></div>
+    </div>
+  </div>
+
+  <!-- QUICK LINKS -->
+  <div class="dash-section">Quick Access</div>
+  <div class="quick-card" onclick="showPage('machinery')">
+    <div class="quick-icon" style="background:var(--green-light);color:var(--green)"><i class="ti ti-crane"></i></div>
+    <div><div class="quick-title">Machinery Monitor</div><div class="quick-sub" id="q-machinery">Loading...</div></div>
+    <i class="ti ti-chevron-right quick-arrow"></i>
+  </div>
+  <div class="quick-card" onclick="showPage('workers')">
+    <div class="quick-icon" style="background:var(--blue-light);color:var(--blue)"><i class="ti ti-users"></i></div>
+    <div><div class="quick-title">Worker Monitor</div><div class="quick-sub" id="q-workers">Loading...</div></div>
+    <i class="ti ti-chevron-right quick-arrow"></i>
+  </div>
+  <div class="quick-card" onclick="showPage('attendance')">
+    <div class="quick-icon" style="background:var(--amber-light);color:var(--amber)"><i class="ti ti-clock-check"></i></div>
+    <div><div class="quick-title">Attendance</div><div class="quick-sub" id="q-attend">Mark check in/out</div></div>
+    <i class="ti ti-chevron-right quick-arrow"></i>
+  </div>
+  <div class="quick-card" onclick="showPage('report')">
+    <div class="quick-icon" style="background:var(--purple-light);color:var(--purple)"><i class="ti ti-chart-bar"></i></div>
+    <div><div class="quick-title">Daily Report</div><div class="quick-sub">Auto-generated summary</div></div>
+    <i class="ti ti-chevron-right quick-arrow"></i>
+  </div>
+</div>
+</div>
+
+<!-- MACHINERY PAGE -->
+<div class="page" id="page-machinery">
+<div class="container">
+  <div class="stats-4">
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--green-light);color:var(--green)"><i class="ti ti-engine"></i></div><div><div class="stat-num sm" style="color:var(--green)" id="m-running">—</div><div class="stat-label">Running</div></div></div>
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--amber-light);color:var(--amber)"><i class="ti ti-clock-pause"></i></div><div><div class="stat-num sm" style="color:var(--amber)" id="m-idle">—</div><div class="stat-label">Idle</div></div></div>
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--blue-light);color:var(--blue)"><i class="ti ti-tool"></i></div><div><div class="stat-num sm" style="color:var(--blue)" id="m-maint">—</div><div class="stat-label">Maint.</div></div></div>
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--red-light);color:var(--red)"><i class="ti ti-circle-off"></i></div><div><div class="stat-num sm" style="color:var(--red)" id="m-offline">—</div><div class="stat-label">Offline</div></div></div>
+  </div>
+  <div class="toolbar">
+    <div class="search-wrap"><i class="ti ti-search"></i><input type="text" id="m-search" placeholder="Search machinery..." oninput="renderMachinery()"></div>
+    <select class="filter-select" id="m-filter" onchange="renderMachinery()">
+      <option value="">All</option>
+      <option value="running">Running</option>
+      <option value="idle">Idle</option>
+      <option value="maintenance">Maintenance</option>
+      <option value="offline">Offline</option>
+    </select>
+    <button class="btn-primary" id="m-add-btn" style="display:none" onclick="openAddMachineModal()"><i class="ti ti-plus"></i></button>
+  </div>
+  <div class="section-label" id="m-label">All Machinery</div>
+  <div id="m-grid"></div>
+</div>
+</div>
+
+<!-- WORKERS PAGE -->
+<div class="page" id="page-workers">
+<div class="container">
+  <div class="stats-4">
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--green-light);color:var(--green)"><i class="ti ti-hard-hat"></i></div><div><div class="stat-num sm" style="color:var(--green)" id="w-working">—</div><div class="stat-label">Working</div></div></div>
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--amber-light);color:var(--amber)"><i class="ti ti-beach"></i></div><div><div class="stat-num sm" style="color:var(--amber)" id="w-offday">—</div><div class="stat-label">Off Day</div></div></div>
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--blue-light);color:var(--blue)"><i class="ti ti-stethoscope"></i></div><div><div class="stat-num sm" style="color:var(--blue)" id="w-mc">—</div><div class="stat-label">MC</div></div></div>
+    <div class="stat-card small"><div class="stat-icon sm" style="background:var(--purple-light);color:var(--purple)"><i class="ti ti-plane"></i></div><div><div class="stat-num sm" style="color:var(--purple)" id="w-leave">—</div><div class="stat-label">Leave</div></div></div>
+  </div>
+  <div class="toolbar">
+    <div class="search-wrap"><i class="ti ti-search"></i><input type="text" id="w-search" placeholder="Search worker..." oninput="renderWorkers()"></div>
+    <select class="filter-select" id="w-filter" onchange="renderWorkers()">
+      <option value="">All</option>
+      <option value="working">Working</option>
+      <option value="offday">Off Day</option>
+      <option value="mc">MC</option>
+      <option value="annualleave">Annual Leave</option>
+    </select>
+    <button class="btn-primary" id="w-add-btn" style="display:none" onclick="openAddWorkerModal()"><i class="ti ti-plus"></i></button>
+  </div>
+  <div class="section-label" id="w-label">All Workers</div>
+  <div id="w-grid"></div>
+</div>
+</div>
+
+<!-- ATTENDANCE PAGE -->
+<div class="page" id="page-attendance">
+<div class="container">
+  <div class="report-date"><i class="ti ti-calendar"></i><span id="att-date"></span></div>
+  <div class="stats-2" style="margin-bottom:16px">
+    <div class="stat-card"><div class="stat-icon" style="background:var(--green-light);color:var(--green)"><i class="ti ti-login"></i></div><div><div class="stat-num" style="color:var(--green)" id="att-in">—</div><div class="stat-label">Checked In</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--amber-light);color:var(--amber)"><i class="ti ti-logout"></i></div><div><div class="stat-num" style="color:var(--amber)" id="att-out">—</div><div class="stat-label">Checked Out</div></div></div>
+  </div>
+  <div class="section-label">Worker Attendance</div>
+  <div id="att-grid"></div>
+</div>
+</div>
+
+<!-- REPORT PAGE -->
+<div class="page" id="page-report">
+<div class="container">
+  <div class="report-date"><i class="ti ti-calendar-stats"></i><span id="rep-date"></span></div>
+
+  <div class="summary-boxes">
+    <div class="summary-box"><div class="summary-num" style="color:var(--green)" id="rep-attendance">—%</div><div class="summary-label">Attendance Rate</div></div>
+    <div class="summary-box"><div class="summary-num" style="color:var(--blue)" id="rep-onsite">—</div><div class="summary-label">Workers On Site</div></div>
+    <div class="summary-box"><div class="summary-num" style="color:var(--amber)" id="rep-machines">—</div><div class="summary-label">Machines Active</div></div>
+    <div class="summary-box"><div class="summary-num" style="color:var(--red)" id="rep-absent">—</div><div class="summary-label">Absent Today</div></div>
+  </div>
+
+  <div class="report-section">
+    <div class="report-title"><i class="ti ti-users"></i> Worker Status</div>
+    <div id="rep-workers"></div>
+  </div>
+
+  <div class="report-section">
+    <div class="report-title"><i class="ti ti-crane"></i> Machinery Status</div>
+    <div id="rep-machines-list"></div>
+  </div>
+
+  <div class="report-section">
+    <div class="report-title"><i class="ti ti-chart-pie"></i> Status Breakdown</div>
+    <div id="rep-breakdown"></div>
+  </div>
+</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('dash',this)" id="nav-dash">
+    <i class="ti ti-home"></i><span>Dashboard</span>
+  </button>
+  <button class="nav-item" onclick="showPage('machinery',this)" id="nav-machinery">
+    <i class="ti ti-crane"></i><span>Machinery</span>
+  </button>
+  <button class="nav-item" onclick="showPage('workers',this)" id="nav-workers">
+    <i class="ti ti-users"></i><span>Workers</span>
+  </button>
+  <button class="nav-item" onclick="showPage('attendance',this)" id="nav-attendance">
+    <i class="ti ti-clock-check"></i><span>Attendance</span>
+  </button>
+  <button class="nav-item" onclick="showPage('report',this)" id="nav-report">
+    <i class="ti ti-chart-bar"></i><span>Report</span>
+  </button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Update</div>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><i class="ti ti-check"></i><span id="toast-msg"></span></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZ3wOEgU2yu6lNMy4p9ivE77NxrP2B1QA",
+  authDomain: "prsk-machineries.firebaseapp.com",
+  databaseURL: "https://prsk-machineries-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "prsk-machineries",
+  storageBucket: "prsk-machineries.firebasestorage.app",
+  messagingSenderId: "32965661115",
+  appId: "1:32965661115:web:f2f94677d162ea5062349e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const mStatusLabel = {running:'Running',idle:'Idle',maintenance:'Under Maintenance',offline:'Offline'};
+const wStatusLabel = {working:'Working',offday:'Off Day',mc:'MC',annualleave:'Annual Leave'};
+const avatarColors = ['#1D9E75','#2563EB','#D97706','#DC2626','#7C3AED','#0891B2','#BE185D','#65A30D','#EA580C'];
+const positions = ['Operator','Driver','Supervisor','General Worker','Mechanic','Admin','Foreman'];
+const locations = ['Ringlet','Tanah Rata','Brinchang','Lojing','Ipoh','Cameron Highlands'];
+
+let machines = {}, workers = {}, pending = {}, role = 'boss', editingId = null, currentPage = 'dash';
+
+// Date display
+const now = new Date();
+const dateStr = now.toLocaleDateString('en-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+document.getElementById('dash-date').textContent = dateStr;
+document.getElementById('att-date').textContent = dateStr;
+document.getElementById('rep-date').textContent = dateStr;
+
+// Greeting
+const hour = now.getHours();
+const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+document.querySelector('.dash-greeting h2').textContent = greeting + ' 👋';
+
+function setSyncStatus(live){
+  const dot=document.getElementById('sync-dot'),label=document.getElementById('sync-label');
+  if(live){dot.className='sync-dot live';label.textContent='Live';}
+  else{dot.className='sync-dot';label.textContent='Offline';}
+}
+
+// Listen to machines
+const machinesRef = ref(db,'machines');
+onValue(machinesRef,(snapshot)=>{
+  setSyncStatus(true);
+  machines = snapshot.val() || {};
+  updateDashboard();
+  if(currentPage==='machinery') renderMachinery();
+  if(currentPage==='report') renderReport();
+},(e)=>setSyncStatus(false));
+
+// Listen to workers
+const workersRef = ref(db,'workers');
+onValue(workersRef,(snapshot)=>{
+  workers = snapshot.val() || {};
+  updateDashboard();
+  if(currentPage==='workers') renderWorkers();
+  if(currentPage==='attendance') renderAttendance();
+  if(currentPage==='report') renderReport();
+});
+
+// Listen to pending
+const pendingRef = ref(db,'pending');
+onValue(pendingRef,(snapshot)=>{
+  pending = snapshot.val() || {};
+  if(role==='admin') renderApprovals();
+});
+
+// ROLE
+window.setRole = function(r,btn){
+  role=r;
+  document.querySelectorAll('.role-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Machinery add button
+  document.getElementById('m-add-btn').style.display=(r==='admin')?'flex':'none';
+  // Worker add button
+  document.getElementById('w-add-btn').style.display=(r==='hr'||r==='admin')?'flex':'none';
+  // Admin approval panel
+  document.getElementById('d-approval-panel').style.display=(r==='admin')?'block':'none';
+  if(r==='admin') renderApprovals();
+  renderMachinery(); renderWorkers(); renderAttendance();
+};
+
+// PAGE NAVIGATION
+window.showPage = function(page, btn){
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(btn) btn.classList.add('active');
+  else document.getElementById('nav-'+page)?.classList.add('active');
+  if(page==='machinery') renderMachinery();
+  if(page==='workers') renderWorkers();
+  if(page==='attendance') renderAttendance();
+  if(page==='report') renderReport();
+};
+
+// DASHBOARD
+function updateDashboard(){
+  const mList = Object.values(machines);
+  const wList = Object.values(workers);
+  const running = mList.filter(m=>m.status==='running').length;
+  const working = wList.filter(w=>w.status==='working').length;
+  document.getElementById('d-machines').textContent = running;
+  document.getElementById('d-workers').textContent = working;
+  document.getElementById('d-running').textContent = running;
+  document.getElementById('d-idle').textContent = mList.filter(m=>m.status==='idle').length;
+  document.getElementById('d-mc').textContent = wList.filter(w=>w.status==='mc').length;
+  document.getElementById('d-leave').textContent = wList.filter(w=>w.status==='annualleave').length;
+  document.getElementById('q-machinery').textContent = running + ' running, ' + mList.filter(m=>m.status==='maintenance').length + ' maintenance';
+  document.getElementById('q-workers').textContent = working + ' on site, ' + wList.filter(w=>w.status==='offday').length + ' off day';
+}
+
+// APPROVALS
+function renderApprovals(){
+  const list = document.getElementById('d-approval-list');
+  const pc = document.getElementById('d-pending-count');
+  const entries = Object.entries(pending);
+  if(!entries.length){list.innerHTML='<div class="empty-state">No pending requests.</div>';pc.style.display='none';return;}
+  pc.style.display='inline';pc.textContent=entries.length;
+  list.innerHTML = entries.map(([pid,p])=>`
+    <div class="approval-item">
+      <div style="flex:1;min-width:140px">
+        <div class="approval-machine">${p.machineName}</div>
+        <div class="approval-detail">PIC: ${p.pic} · ${mStatusLabel[p.newStatus]} · ${p.operator}</div>
+        ${p.notes?`<div class="approval-detail">${p.notes}</div>`:''}
+      </div>
+      <div class="approval-btns">
+        <button class="btn-approve" onclick="approveRequest('${pid}')">Approve</button>
+        <button class="btn-reject" onclick="rejectRequest('${pid}')">Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+window.approveRequest = async function(pid){
+  const p=pending[pid];
+  const updates={status:p.newStatus,operator:p.operator,hours:p.hours,location:p.location};
+  if(p.notes)updates.notes=p.notes;
+  if(p.lastServiced)updates.lastServiced=p.lastServiced;
+  await update(ref(db,'machines/'+p.machineId),updates);
+  await remove(ref(db,'pending/'+pid));
+  showToast('Approved and applied.');
+};
+window.rejectRequest = async function(pid){
+  await remove(ref(db,'pending/'+pid));
+  showToast('Request rejected.');
+};
+
+// MACHINERY
+window.renderMachinery = function(){
+  const q=document.getElementById('m-search').value.toLowerCase();
+  const fs=document.getElementById('m-filter').value;
+  const entries=Object.entries(machines).filter(([id,m])=>{
+    const match=[m.name,m.operator,m.location,m.spec].join(' ').toLowerCase().includes(q);
+    return match&&(!fs||m.status===fs);
+  });
+  const mList=Object.values(machines);
+  document.getElementById('m-running').textContent=mList.filter(m=>m.status==='running').length;
+  document.getElementById('m-idle').textContent=mList.filter(m=>m.status==='idle').length;
+  document.getElementById('m-maint').textContent=mList.filter(m=>m.status==='maintenance').length;
+  document.getElementById('m-offline').textContent=mList.filter(m=>m.status==='offline').length;
+  document.getElementById('m-label').textContent=entries.length+' machine'+(entries.length!==1?'s':'')+(fs?' — '+mStatusLabel[fs]:'');
+  const g=document.getElementById('m-grid');
+  if(!entries.length){g.innerHTML='<div class="empty-state">No machinery found.</div>';return;}
+  g.innerHTML=entries.map(([id,m])=>`
+    <div class="card">
+      <div class="card-top"><div class="card-name">${m.name}</div><span class="badge ${m.status}">${mStatusLabel[m.status]}</span></div>
+      <div class="divider"></div>
+      <div class="card-rows">
+        <div class="card-row"><span class="row-label"><i class="ti ti-id-badge"></i>Spec/Plate</span><span class="row-val">${m.spec||'—'}</span></div>
+        <div class="card-row"><span class="row-label"><i class="ti ti-map-pin"></i>Location</span><span class="row-val">${m.location}</span></div>
+        <div class="card-row"><span class="row-label"><i class="ti ti-user"></i>Operator</span><span class="row-val">${m.operator}</span></div>
+        <div class="card-row"><span class="row-label"><i class="ti ti-clock"></i>Hours Run</span><span class="row-val">${m.hours||0} hrs</span></div>
+        <div class="card-row"><span class="row-label"><i class="ti ti-calendar"></i>Last Serviced</span><span class="row-val">${m.lastServiced||'—'}</span></div>
+      </div>
+      ${m.notes?`<div class="card-notes"><i class="ti ti-notes" style="font-size:13px;flex-shrink:0;margin-top:1px"></i>${m.notes}</div>`:''}
+      ${role==='pm'?`<div class="card-actions"><button class="btn-edit" onclick="openPicModal('${id}')"><i class="ti ti-edit" style="font-size:13px"></i> Request Update</button></div>`:''}
+      ${role==='admin'?`<div class="card-actions"><button class="btn-edit" onclick="openEditMachineModal('${id}')"><i class="ti ti-edit" style="font-size:13px"></i> Edit</button><button class="btn-danger" onclick="deleteMachine('${id}')"><i class="ti ti-trash"></i></button></div>`:''}
+    </div>`).join('');
+};
+
+// WORKERS
+window.renderWorkers = function(){
+  const q=document.getElementById('w-search').value.toLowerCase();
+  const fs=document.getElementById('w-filter').value;
+  const entries=Object.entries(workers).filter(([id,w])=>{
+    const match=[w.name,w.position,w.location,w.machinery].join(' ').toLowerCase().includes(q);
+    return match&&(!fs||w.status===fs);
+  });
+  const wList=Object.values(workers);
+  document.getElementById('w-working').textContent=wList.filter(w=>w.status==='working').length;
+  document.getElementById('w-offday').textContent=wList.filter(w=>w.status==='offday').length;
+  document.getElementById('w-mc').textContent=wList.filter(w=>w.status==='mc').length;
+  document.getElementById('w-leave').textContent=wList.filter(w=>w.status==='annualleave').length;
+  document.getElementById('w-label').textContent=entries.length+' worker'+(entries.length!==1?'s':'')+(fs?' — '+wStatusLabel[fs]:'');
+  const g=document.getElementById('w-grid');
+  if(!entries.length){g.innerHTML='<div class="empty-state">No workers found.</div>';return;}
+  g.innerHTML=entries.map(([id,w],i)=>{
+    const initials=w.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+    const color=avatarColors[i%avatarColors.length];
+    return `<div class="card">
+      <div class="card-top">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          <div class="avatar" style="background:${color}">${initials}</div>
+          <div><div class="card-name">${w.name}</div><div class="card-sub">${w.position}</div></div>
+        </div>
+        <span class="badge ${w.status}">${wStatusLabel[w.status]}</span>
+      </div>
+      <div class="divider"></div>
+      <div class="card-rows">
+        <div class="card-row"><span class="row-label"><i class="ti ti-id"></i>IC Number</span><span class="row-val">${w.ic||'—'}</span></div>
+        <div class="card-row"><span class="row-label"><i class="ti ti-phone"></i>Contact</span><span class="row-val">${w.contact||'—'}</span></div>
+        <div class="card-row"><span class="row-label"><i class="ti ti-map-pin"></i>Location</span><span class="row-val">${w.location||'—'}</span></div>
+        <div class="card-row"><span class="row-label"><i class="ti ti-crane"></i>Machinery</span><span class="row-val">${w.machinery||'—'}</span></div>
+      </div>
+      <div class="attend-row">
+        <div class="attend-box"><div class="attend-lbl">Check In</div><div class="attend-val">${w.checkin||'—'}</div></div>
+        <div class="attend-box"><div class="attend-lbl">Check Out</div><div class="attend-val">${w.checkout||'—'}</div></div>
+      </div>
+      ${w.notes?`<div class="card-notes"><i class="ti ti-notes" style="font-size:13px;flex-shrink:0;margin-top:1px"></i>${w.notes}</div>`:''}
+      ${(role==='pm'||role==='hr'||role==='admin')?`<div class="card-actions">
+        ${!w.checkin?`<button class="btn-checkin" onclick="checkIn('${id}')"><i class="ti ti-login" style="font-size:13px"></i> Check In</button>`:''}
+        ${w.checkin&&!w.checkout?`<button class="btn-checkout" onclick="checkOut('${id}')"><i class="ti ti-logout" style="font-size:13px"></i> Check Out</button>`:''}
+        ${w.checkin&&w.checkout?`<span style="font-size:12px;color:var(--text-3);padding:9px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check" style="color:var(--green)"></i> Completed</span>`:''}
+        ${(role==='hr'||role==='admin')?`<button class="btn-edit" onclick="openEditWorkerModal('${id}')"><i class="ti ti-edit" style="font-size:13px"></i> Edit</button>`:''}
+        ${role==='admin'?`<button class="btn-danger" onclick="deleteWorker('${id}')"><i class="ti ti-trash"></i></button>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+};
+
+// ATTENDANCE
+function renderAttendance(){
+  const wList = Object.entries(workers);
+  const checkedIn = wList.filter(([id,w])=>w.checkin).length;
+  const checkedOut = wList.filter(([id,w])=>w.checkout).length;
+  document.getElementById('att-in').textContent = checkedIn;
+  document.getElementById('att-out').textContent = checkedOut;
+  const g = document.getElementById('att-grid');
+  if(!wList.length){g.innerHTML='<div class="empty-state">No workers found.</div>';return;}
+  g.innerHTML = wList.map(([id,w],i)=>{
+    const initials=w.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+    const color=avatarColors[i%avatarColors.length];
+    return `<div class="card">
+      <div class="card-top">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          <div class="avatar" style="background:${color};width:36px;height:36px;font-size:13px">${initials}</div>
+          <div><div class="card-name" style="font-size:13px">${w.name}</div><div class="card-sub">${w.position} · ${w.location||'—'}</div></div>
+        </div>
+        <span class="badge ${w.status}">${wStatusLabel[w.status]}</span>
+      </div>
+      <div class="attend-row">
+        <div class="attend-box"><div class="attend-lbl">Check In</div><div class="attend-val" style="color:${w.checkin?'var(--green)':'var(--text-3)'}">${w.checkin||'—'}</div></div>
+        <div class="attend-box"><div class="attend-lbl">Check Out</div><div class="attend-val" style="color:${w.checkout?'var(--red)':'var(--text-3)'}">${w.checkout||'—'}</div></div>
+      </div>
+      ${(role==='pm'||role==='hr'||role==='admin')?`<div class="card-actions">
+        ${!w.checkin?`<button class="btn-checkin" onclick="checkIn('${id}')"><i class="ti ti-login" style="font-size:13px"></i> Check In</button>`:''}
+        ${w.checkin&&!w.checkout?`<button class="btn-checkout" onclick="checkOut('${id}')"><i class="ti ti-logout" style="font-size:13px"></i> Check Out</button>`:''}
+        ${w.checkin&&w.checkout?`<span style="font-size:12px;color:var(--green);padding:9px;display:flex;align-items:center;gap:4px"><i class="ti ti-circle-check"></i> Done</span>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// REPORT
+function renderReport(){
+  const wList = Object.values(workers);
+  const mList = Object.values(machines);
+  const total = wList.length;
+  const onSite = wList.filter(w=>w.status==='working').length;
+  const absent = wList.filter(w=>w.status==='offday'||w.status==='mc'||w.status==='annualleave').length;
+  const activeMachines = mList.filter(m=>m.status==='running').length;
+  const rate = total>0?Math.round((onSite/total)*100):0;
+
+  document.getElementById('rep-attendance').textContent = rate+'%';
+  document.getElementById('rep-onsite').textContent = onSite+'/'+total;
+  document.getElementById('rep-machines').textContent = activeMachines+'/'+mList.length;
+  document.getElementById('rep-absent').textContent = absent;
+
+  // Workers list
+  document.getElementById('rep-workers').innerHTML = wList.map(w=>`
+    <div class="report-row">
+      <div class="report-label"><span class="badge ${w.status}" style="font-size:10px;padding:2px 6px">${wStatusLabel[w.status]}</span>${w.name} <span style="color:var(--text-3);font-size:11px;margin-left:4px">${w.position}</span></div>
+      <div class="report-val" style="font-size:12px;color:var(--text-3)">${w.checkin?(w.checkin+' — '+(w.checkout||'On site')):'—'}</div>
+    </div>`).join('') || '<div class="empty-state">No workers.</div>';
+
+  // Machines list
+  document.getElementById('rep-machines-list').innerHTML = mList.map(m=>`
+    <div class="report-row">
+      <div class="report-label"><span class="badge ${m.status}" style="font-size:10px;padding:2px 6px">${mStatusLabel[m.status]}</span>${m.name}</div>
+      <div class="report-val" style="font-size:12px;color:var(--text-3)">${m.operator!=='Unassigned'?m.operator:'—'}</div>
+    </div>`).join('') || '<div class="empty-state">No machinery.</div>';
+
+  // Breakdown
+  const breakdown = [
+    {label:'Working',count:wList.filter(w=>w.status==='working').length,color:var_green,total},
+    {label:'Off Day',count:wList.filter(w=>w.status==='offday').length,color:'#D97706',total},
+    {label:'MC',count:wList.filter(w=>w.status==='mc').length,color:'#2563EB',total},
+    {label:'Annual Leave',count:wList.filter(w=>w.status==='annualleave').length,color:'#7C3AED',total},
+  ];
+  document.getElementById('rep-breakdown').innerHTML = breakdown.map(b=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:var(--text-2)">${b.label}</span>
+        <span style="font-weight:600;color:${b.color}">${b.count} worker${b.count!==1?'s':''}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${b.total>0?Math.round((b.count/b.total)*100):0}%;background:${b.color}"></div></div>
+    </div>`).join('');
+}
+const var_green = '#1D9E75';
+
+// CHECK IN/OUT
+window.checkIn = async function(id){
+  const t=new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit',hour12:false});
+  await update(ref(db,'workers/'+id),{checkin:t,status:'working'});
+  showToast('Checked in at '+t);
+};
+window.checkOut = async function(id){
+  const t=new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit',hour12:false});
+  await update(ref(db,'workers/'+id),{checkout:t});
+  showToast('Checked out at '+t);
+};
+
+// MACHINERY MODALS
+window.openPicModal = function(id){
+  const m=machines[id]; editingId=id;
+  document.getElementById('modal-title').textContent=m.name;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="pic-notice"><i class="ti ti-info-circle" style="font-size:15px;flex-shrink:0"></i>Your request will be sent to admin for approval before changes take effect.</div>
+    <div class="form-row"><label>Your Name (PIC) *</label><input id="f-pic" placeholder="Enter your full name"></div>
+    <div class="form-row"><label>New Status</label><select id="f-status">
+      <option value="running" ${m.status==='running'?'selected':''}>Running</option>
+      <option value="idle" ${m.status==='idle'?'selected':''}>Idle</option>
+      <option value="maintenance" ${m.status==='maintenance'?'selected':''}>Under Maintenance</option>
+      <option value="offline" ${m.status==='offline'?'selected':''}>Offline</option>
+    </select></div>
+    <div class="form-row"><label>Operator</label><input id="f-operator" value="${m.operator==='Unassigned'?'':m.operator}" placeholder="Operator name"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Location</label><input id="f-location" value="${m.location}"></div>
+      <div class="form-row"><label>Hours Run</label><input id="f-hours" type="number" value="${m.hours||0}" min="0"></div>
+    </div>
+    <div class="form-row"><label>Last Serviced</label><input id="f-serviced" type="date" value="${m.lastServiced||''}"></div>
+    <div class="form-row"><label>Notes</label><input id="f-notes" value="${m.notes||''}" placeholder="Remarks..."></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="submitPicRequest()">Submit for Approval</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.submitPicRequest = async function(){
+  const pic=document.getElementById('f-pic').value.trim();
+  if(!pic){showToast('Please enter your name.');return;}
+  const m=machines[editingId];
+  const btn=document.getElementById('submit-btn');btn.disabled=true;btn.textContent='Submitting...';
+  await push(ref(db,'pending'),{
+    machineId:editingId,machineName:m.name,pic,
+    newStatus:document.getElementById('f-status').value,
+    operator:document.getElementById('f-operator').value||'Unassigned',
+    location:document.getElementById('f-location').value,
+    hours:parseInt(document.getElementById('f-hours').value)||0,
+    lastServiced:document.getElementById('f-serviced').value||'',
+    notes:document.getElementById('f-notes').value,
+    submittedAt:new Date().toISOString()
+  });
+  closeModal();showToast('Request submitted — awaiting admin approval.');
+};
+
+window.openEditMachineModal = function(id){
+  const m=machines[id]; editingId=id;
+  document.getElementById('modal-title').textContent='Edit — '+m.name;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="form-row"><label>Status</label><select id="f-status">
+      <option value="running" ${m.status==='running'?'selected':''}>Running</option>
+      <option value="idle" ${m.status==='idle'?'selected':''}>Idle</option>
+      <option value="maintenance" ${m.status==='maintenance'?'selected':''}>Under Maintenance</option>
+      <option value="offline" ${m.status==='offline'?'selected':''}>Offline</option>
+    </select></div>
+    <div class="form-row"><label>Operator</label><input id="f-operator" value="${m.operator==='Unassigned'?'':m.operator}" placeholder="Operator name"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Location</label><input id="f-location" value="${m.location}"></div>
+      <div class="form-row"><label>Hours Run</label><input id="f-hours" type="number" value="${m.hours||0}" min="0"></div>
+    </div>
+    <div class="form-row"><label>Last Serviced</label><input id="f-serviced" type="date" value="${m.lastServiced||''}"></div>
+    <div class="form-row"><label>Notes</label><input id="f-notes" value="${m.notes||''}" placeholder="Remarks..."></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="saveMachineEdit()">Save Changes</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.saveMachineEdit = async function(){
+  const btn=document.getElementById('submit-btn');btn.disabled=true;btn.textContent='Saving...';
+  await update(ref(db,'machines/'+editingId),{
+    status:document.getElementById('f-status').value,
+    operator:document.getElementById('f-operator').value||'Unassigned',
+    location:document.getElementById('f-location').value,
+    hours:parseInt(document.getElementById('f-hours').value)||0,
+    lastServiced:document.getElementById('f-serviced').value||'',
+    notes:document.getElementById('f-notes').value
+  });
+  closeModal();showToast('Machinery updated.');
+};
+
+window.openAddMachineModal = function(){
+  editingId=null;
+  document.getElementById('modal-title').textContent='Add New Machinery';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="form-row"><label>Machinery Name *</label><input id="f-name" placeholder="e.g. Excavator 20 Ton"></div>
+    <div class="form-row"><label>Spec / Plate No.</label><input id="f-spec" placeholder="e.g. ABC 1234"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Location</label><input id="f-location" placeholder="e.g. Ringlet"></div>
+      <div class="form-row"><label>Status</label><select id="f-status">
+        <option value="idle">Idle</option><option value="running">Running</option>
+        <option value="maintenance">Under Maintenance</option><option value="offline">Offline</option>
+      </select></div>
+    </div>
+    <div class="form-row"><label>Operator</label><input id="f-operator" placeholder="Operator name"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="addMachine()">Add Machinery</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.addMachine = async function(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){showToast('Please enter machinery name.');return;}
+  const btn=document.getElementById('submit-btn');btn.disabled=true;btn.textContent='Adding...';
+  await push(machinesRef,{name,spec:document.getElementById('f-spec').value||'—',location:document.getElementById('f-location').value||'—',operator:document.getElementById('f-operator').value||'Unassigned',status:document.getElementById('f-status').value,hours:0,lastServiced:'',notes:''});
+  closeModal();showToast('Machinery added.');
+};
+
+window.deleteMachine = async function(id){
+  if(!confirm('Remove this machinery?'))return;
+  await remove(ref(db,'machines/'+id));showToast('Machinery removed.');
+};
+
+// WORKER MODALS
+window.openEditWorkerModal = function(id){
+  const w=workers[id]; editingId=id;
+  document.getElementById('modal-title').textContent='Edit — '+w.name;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="form-grid">
+      <div class="form-row"><label>Full Name</label><input id="f-name" value="${w.name}"></div>
+      <div class="form-row"><label>IC Number</label><input id="f-ic" value="${w.ic||''}"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Position</label><select id="f-position">${positions.map(p=>`<option value="${p}" ${w.position===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="form-row"><label>Status</label><select id="f-status">
+        <option value="working" ${w.status==='working'?'selected':''}>Working</option>
+        <option value="offday" ${w.status==='offday'?'selected':''}>Off Day</option>
+        <option value="mc" ${w.status==='mc'?'selected':''}>MC</option>
+        <option value="annualleave" ${w.status==='annualleave'?'selected':''}>Annual Leave</option>
+      </select></div>
+    </div>
+    <div class="form-row"><label>Contact</label><input id="f-contact" value="${w.contact||''}" type="tel"></div>
+    <div class="form-row"><label>Location</label><input id="f-location" value="${w.location||''}"></div>
+    <div class="form-row"><label>Assigned Machinery</label><input id="f-machinery" value="${w.machinery||''}"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Check In</label><input id="f-checkin" type="time" value="${w.checkin||''}"></div>
+      <div class="form-row"><label>Check Out</label><input id="f-checkout" type="time" value="${w.checkout||''}"></div>
+    </div>
+    <div class="form-row"><label>Notes</label><input id="f-notes" value="${w.notes||''}" placeholder="MC reason, remarks..."></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="saveWorkerEdit()">Save Changes</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.saveWorkerEdit = async function(){
+  const btn=document.getElementById('submit-btn');btn.disabled=true;btn.textContent='Saving...';
+  await update(ref(db,'workers/'+editingId),{
+    name:document.getElementById('f-name').value,
+    ic:document.getElementById('f-ic').value,
+    position:document.getElementById('f-position').value,
+    status:document.getElementById('f-status').value,
+    contact:document.getElementById('f-contact').value,
+    location:document.getElementById('f-location').value,
+    machinery:document.getElementById('f-machinery').value,
+    checkin:document.getElementById('f-checkin').value,
+    checkout:document.getElementById('f-checkout').value,
+    notes:document.getElementById('f-notes').value,
+  });
+  closeModal();showToast('Worker updated.');
+};
+
+window.openAddWorkerModal = function(){
+  editingId=null;
+  document.getElementById('modal-title').textContent='Add New Worker';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="form-grid">
+      <div class="form-row"><label>Full Name *</label><input id="f-name" placeholder="Worker name"></div>
+      <div class="form-row"><label>IC Number</label><input id="f-ic" placeholder="XXXXXX-XX-XXXX"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Position</label><select id="f-position">${positions.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></div>
+      <div class="form-row"><label>Status</label><select id="f-status">
+        <option value="working">Working</option><option value="offday">Off Day</option>
+        <option value="mc">MC</option><option value="annualleave">Annual Leave</option>
+      </select></div>
+    </div>
+    <div class="form-row"><label>Contact</label><input id="f-contact" type="tel" placeholder="01X-XXXXXXX"></div>
+    <div class="form-row"><label>Location</label><input id="f-location" placeholder="e.g. Ringlet"></div>
+    <div class="form-row"><label>Assigned Machinery</label><input id="f-machinery" placeholder="e.g. Excavator 20 Ton"></div>
+    <div class="form-row"><label>Notes</label><input id="f-notes" placeholder="Any remarks..."></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-submit" id="submit-btn" onclick="addWorker()">Add Worker</button>
+    </div>`;
+  document.getElementById('modal').style.display='flex';
+};
+
+window.addWorker = async function(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){showToast('Please enter worker name.');return;}
+  const btn=document.getElementById('submit-btn');btn.disabled=true;btn.textContent='Adding...';
+  await push(workersRef,{name,ic:document.getElementById('f-ic').value,position:document.getElementById('f-position').value,status:document.getElementById('f-status').value,contact:document.getElementById('f-contact').value,location:document.getElementById('f-location').value,machinery:document.getElementById('f-machinery').value,checkin:'',checkout:'',notes:document.getElementById('f-notes').value});
+  closeModal();showToast('Worker added.');
+};
+
+window.deleteWorker = async function(id){
+  if(!confirm('Remove this worker?'))return;
+  await remove(ref(db,'workers/'+id));showToast('Worker removed.');
+};
+
+window.closeModal = function(){document.getElementById('modal').style.display='none';};
+window.handleOverlayClick = function(e){if(e.target===document.getElementById('modal'))closeModal();};
+window.showToast = function(msg){const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);};
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
